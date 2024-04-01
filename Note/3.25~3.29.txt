@@ -1,0 +1,334 @@
+/*********-------------------------------------------3.25-----------------------------------------*******/
+
+针对一些低性能（M0）或者低功耗(L系列)的芯片编程时。相较于HAL库的低效率，寄存器操作的复杂，标准库的逐渐淘汰。LL库就成为了替代HAL库一个比较好的选择了。
+
+
+LL_USART_EnableIT_RXNE(USART1); 	//串口1接收RXNE位中断使能
+
+while ( ! LL_USART_IsActiveFlag_TXE(USART1));
+  /*SART数据发送有两个标志，一个是TXE=1,发送缓冲区空标志：
+  说明可以往数据寄存器写入数据了，但并不代码数据发送完成了*/
+
+
+LL_USART_TransmitData8(USART1,Send_Text[index]);
+
+while (!LL_USART_IsActiveFlag_TC(USART1));		//另一个是TC=1发送结束
+
+RxBuff[i++]= LL_USART_ReceiveData8(USART1);		//接收数据
+ 
+按键KEY
+		按下			低
+		不按			高
+
+灯LED
+亮 		低
+灭		高
+
+
+设 HSI = 40KHz，分频系数 64，计数器重装载值 500。
+
+IWDG
+	超时时间T = 500 * 1.6ms = 800ms
+IWDG 的时钟周期为 40KHz/64 = 0.625KHz；
+所以 IWDG 计数器计数1（减 1）所需的时间为 1/0.625KHz = 1.6ms；
+因此 IWDG 超时时间为 1.6ms * 500 = 800ms
+
+蜂鸣器采用无源蜂鸣器，需要给一定的频率的方波信号
+
+
+
+1、app_process();
+2、app_start(NULL);		一些初始化
+3、UserIOcontrolinit();		用户按键初始化
+4、io_init				根据传入的参数不同，用已经定义的相应的结构体给要初始化的结构体赋值，初始化IO
+5、UserIOcontrol			根据传入的GPIOx，设置相应引脚的输出状态-->高低电平
+6、LaunchProcess();		BuzzerDriveInit-->无源蜂鸣器（需要给一定的频率的方波信号）
+7、BEEPANDJKstate		蜂鸣器电源状态--->函数内为   蜂鸣器响---延时---蜂鸣器关---延时
+8、Configure_IWDG();		开启看门狗
+9、loadSamplepara();		装载参数///？？？？？？？///
+10、DebugUart();    		调试串口初始化
+11、Sensor_Init();  		目前温度采集初始化-->延时-->喂狗
+
+
+
+
+/*********----------------------------------------------------------3.26-----------------------------------------------------------------------*******/
+
+memcpy		复制函数		-->参数一：目标地址		参数二：源地址		参数三：大小
+
+1、loadSamplepara	-->	Load_Algorithm_Param();		//装载算法相关参数设置		
+					-->	将flash的这个地址ADDR_FLASH_PAGE_100--- (uint32_t)0x0803 2000---内容复制到  device_Algorithm_para
+
+				判断是否初始化	-->是，init_flag等于26
+								-->否 --> InitAlgorithm_Param(); 将复制好的值赋给结构体 --> Algorithm_Save_Para();  保存
+			
+	Load_Function_Param();		//装载用户相关参数设置	------与装载算法相关参数设置一样	
+								用户相关参数包括波特率、蜂鸣器状态、语言、指示光状态等
+							-->ADDR_FLASH_PAGE_102		----flash地址改为102页，(uint32_t)0x0803 3000
+			
+2、DebugUart();    		//调试串口初始化		
+	Configure_USART2	-->波特率设置为 0 --> 根据switch case 设置为 115200    0--115200   1--9600   2--19200   默认--115200
+	active_USART2_DMA	-->USART2_R_DMA_Config -->初始化启用DMA
+
+3、Ring_Buffer_Init		//初始化缓冲区
+
+4、Sensor_Init();  			//IC芯片初始化
+					-->TempSensorInit();		//温度采集初始化	-->MYI2C_Init
+
+
+/*********------------------------------------------------------3.27------------------------------------------------------------------------*******/
+										key
+
+1、app_start(NULL);			-->		串口调试、看门狗、蜂鸣器、加载相关默认参数、传感器初始化
+
+2、进入while循环
+
+3、Serialportanalysis			-->	串口解析	-->	判断缓冲区中是否存在命令
+
+4、Menu_Display();			//菜单显示
+		
+
+/*********--------------------------------------------------------3.28------------------------------------------------------------------------*******/
+
+
+如何将PC8设置为低电平
+1、UserIOcontrol(Power3v3M1EN,CLOSE);	
+
+2、UserIOcontrol，将传入的close参数传给该函数，函数中根据switch case 进行匹配，-->OPEN 或者	-->CLOSE 或者其他 -->退出
+
+3、LL_GPIO_ResetOutputPin(User_Contorlstruct[name]->port, User_Contorlstruct[name]->pin);
+	User_Contorlstruct[name]是一个存放所有引脚的结构体信息的数组
+	数组中包含该引脚的所有定义，包括port、pin、mode、pull......
+
+具体如下：
+	
+1、UserIOcontrol(Power3v3M1EN,CLOSE);
+2、void UserIOcontrol(uint8_t name,uint8_t state){
+	switch(state)
+	{
+		case OPEN:
+			LL_GPIO_SetOutputPin(User_Contorlstruct[name]->port, User_Contorlstruct[name]->pin);
+			break;
+		//匹配case
+		case CLOSE:
+			LL_GPIO_ResetOutputPin(User_Contorlstruct[name]->port, User_Contorlstruct[name]->pin);
+		break;
+		default:
+		break;
+	}	
+}
+3、LL_GPIO_ResetOutputPin(User_Contorlstruct[name]->port, User_Contorlstruct[name]->pin);
+4、User_Contorlstruct[name]-->
+	gpio_t *User_Contorlstruct[UserConNum]={
+	(gpio_t *)&gpio_CH4LED_Yellow,
+	(gpio_t *)&gpio_CH4LED_Red,
+	(gpio_t *)&gpio_CH4LED_Green,
+	(gpio_t *)&gpio_COLED_Yellow,
+	(gpio_t *)&gpio_COLED_Red,
+	(gpio_t *)&gpio_COLED_Green,
+	(gpio_t *)&gpio_COLive_YELLOW,
+	//(gpio_t *)&gpio_PowerEN,
+	(gpio_t *)&gpio_WiFi_Mode,
+	//(gpio_t *)&gpio_WiFi_En,
+	//(gpio_t *)&gpio_WiFi_REset,
+	(gpio_t *)&gpio_Key_Menu,
+	(gpio_t *)&gpio_JK1,
+	(gpio_t *)&gpio_JK2,
+	(gpio_t *)&gpio_Power3v3M1EN,
+	(gpio_t *)&gpio_Power12vEN,
+	};
+5、typedef struct {
+    		GPIO_TypeDef *port;
+   		 uint32_t pin;
+   		 uint32_t mode;
+	  	uint32_t speed;
+    		uint32_t OutputType;
+  		uint32_t pull;
+    		uint32_t altr;
+	}gpio_t;
+6、const gpio_t gpio_Power3v3M1EN = {
+		.port = GPIOC,
+		.pin = LL_GPIO_PIN_8,
+		.mode = LL_GPIO_MODE_OUTPUT,
+		.OutputType=LL_GPIO_OUTPUT_PUSHPULL,
+		.pull = LL_GPIO_PULL_NO,
+	};
+7、LL_GPIO_ResetOutputPin	--> PC8
+
+
+-------------万能的调试串口初始化。函数可以传入的参数是波特率，默认会采用115200---------------
+
+1、DebugUart();    //调试串口初始化
+2、static void DebugUart(void)
+	{
+		switch(device_Function_para.baud)					//选择对外输出波特率
+		{
+			case 0:
+			  	Configure_USART1(115200);	
+			 	 break;
+			case 1:
+				  Configure_USART1(9600);					//串口初始化
+				  break;
+			default:
+				  Configure_USART1(115200);				//串口初始化
+		}	
+	}
+
+
+
+---------------------------Serialportanalysis	-->	串口解析数据----------------------------------
+
+1、Ring_Buffer_Get_Lenght(&RB4)	--> 判断RB4缓冲区内是否有数据   -->  函数返回值为已存储的数据长度
+
+2、Ring_Buffer_Read_String(&RB4,getdata,len);			--> 将读取出来的数据保存到getdata中
+
+3、对命令进行解析	-->  @命令@				-->UnparkRcv(getdata);
+				-->	0x3A命令0x0A		-->UnparkRcvFunction(getdata);
+				-->	0xAA命令0x5A		-->UnparkRcvHistory(getdata);
+				-->	setiap				-->SoftReset();			//软件复位
+
+-----------------Menu_Display		-->	菜单显示------------------
+
+1、keyc_time = LL_GetTick();		-->	函数返回值为tmp = time1ms	-->	time1ms=0	-->keyc_time = 0
+
+2、KeyCode = 255
+
+3、if ((keyc_time - keyscan_timer) > 20)//电量20ms刷新一次	-->	滴答定时器中tim1ms在累加	-->	keyscan_timer = 0
+
+4、keyscan_timer = keyc_time;
+
+5、GetKey(&KeyCode);		-->	KeyState_Menu(pKeyValue);	传入的参数即KeyCode=255		-->	KeyState_Menu(pKeyValue);
+
+	switch(key_status)		-->	key_status = 0
+
+	UserIOStateRead(Key_Menu)==0 	-->	返回值为	Key_Menu--PB7	是否被设为高电平	1--是   0--否-->也就是判断按键是否被按下
+
+	如果按键被按下0==0	-->	那么key_status++	并继续case1	-->case1重复上次检测	-->	达到消抖
+
+	如果两次检测都是按下	-->判断key_time<700 && (UserIOStateRead(Key_Menu)==0)
+
+	此时按键按下被检测到	-->	1&&(0==0)	-->	1	-->此时，key_time++		key_time会累加到一定值
+
+	根据key_time累加到的值不同进行区分	-->	分为按键时间长短，然后检测松手
+
+↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓
+
+1、LightStateProcess(&CH4Sensor,&KeyCode);	-->	判断CH4Sensor结构体中的输出设备状态标志以及按键锁状态
+
+2、如果能进来if	-->	表示有故障，同时未在自检状态下	-->	黄灯闪烁，且红灯和绿灯都灭
+
+3、根据刚才按键时间长短给一个标志1、2、3、4，同时用KeyLockError记录下这一状态
+
+4、如果没有故障	-->	判断CH4浓度是否大于预设的值	
+
+5、甲烷浓度大于预设	-->	是		红灯闪烁，且其他灯灭		-->	会把当前CH4浓度记录到shuju中之后伴随电磁阀继电器闪烁打开
+
+6、甲烷浓度不大于预设		会根据之前按键时间长短时留的keyvalue值进行switch case匹配
+					-->	255		绿灯常亮，且其他灯灭		-->	关闭电磁阀、继电器
+					-->	KEY_Menu	空
+					-->	KEY_MenuM	-->手动自检	并将滴答定时器计数值作为自检时间
+					-->	KEY_MenuL	-->模拟报警	并将滴答定时器计数值作为报警时间
+					-->	KEY_MenuLL	-->复位		并将滴答定时器计数值作为复位时间
+
+↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓
+
+1、SelfTestProcess(void)	-->	自检		存在自检标志位，根据switch case进行
+		
+2、将所有灯关闭，并记录此时的滴答定时器数值给到灯光计数值
+
+3、蜂鸣器闪烁一次，再次进行判断执行其它操作
+
+↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓
+
+1、AnAlarmProcess();		-->报警		-->	伴随灯和蜂鸣器的开关
+
+↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓
+
+1、ResretProcess();		-->复位		-->	灯闪烁
+
+                
+
+/*********--------------------------------------------------------3.29------------------------------------------------------------*******/
+
+
+命令解析			-->  @命令@				-->UnparkRcv(getdata);
+				-->	0x3A命令0x0A		-->UnparkRcvFunction(getdata);
+				-->	0xAA命令0x5A		-->UnparkRcvHistory(getdata);
+				-->	setiap				-->SoftReset();			//软件复位
+
+
+UnparkRcv(getdata);			-->	uint8_t Handcheck(uint8_t *Uatbuf,char *a,uint8_t *len)		判断Uatbuf中是否含有char *a字符串--1有0无
+
+UnparkRcvFunction(getdata);	-->check=(RxBuf[1]+RxBuf[2]+RxBuf[3]) & 0xff;	--> if(RxBuf[4]==check) --> 检测数据准确性
+							-->int16_t CheckModbusAdress(uint16_t adress)		-->检查地址合法	-->合法i不合法-1
+							-->不合法	-->	什么也不做		合法	--> 执行相应的命令
+							-->通过串口1 发送出去
+
+UnparkRcvHistory(getdata);	-->check = (RxBuf[0]+RxBuf[1]+RxBuf[2]+RxBuf[3])%256;	检验数据前四位(并对256取余)
+							-->if(RxBuf[4]==check)		检验第五位是否与前几位计算得出的校验值相同	如果相同再校验第三位是否等于0x08
+							-->相同	-->空	不同	-->	将第三位存放的数据所对应的控制命令赋给addr_start
+							-->Read_Word	--读指定地址的数据并存放到ReadBuff
+							-->再重新赋值并通过串口4发送出去
+
+SoftReset();					-->Handcheck(getdata,"setiap",&len)	判断数据缓冲区中是否含有setiap
+							-->如果有那么执行SoftReset				-->			NVIC_SystemReset();
+
+
+
+/**************************************************************************************************************************************/
+
+
+
+如果要添加某个东西
+
+1、UserIOcontrol.c里面，找到gpio_t *User_Contorlstruct[UserConNum]，在下面添加命名的
+
+2、在上面复制粘贴已有的，修改IO口需要配置的模式
+
+3、跳到UserIOcontrol.h里面，在enum枚举中添加命名的，最好与.c命名一致
+
+4、还是UserIOcontrol.h里面，修改UserConNum宏定义的 数量，大小要与上面枚举的大小一致
+
+之后需要用谁就直接调用函数UserIOcontrol(uint8_t name,uint8_t state)，参数一为枚举中的，参数二为open或close
+例如UserIOcontrol(CO_LED_Yellow,CLOSE)		-->		就是关闭CO_LED_YELLOW
+
+
+毫秒延时				-->			LL_mDelay(1000);						//延时等待
+
+
+
+如果需要读取某个IO口的高低电平		-->	uint8_t UserIOStateRead(uint8_t name)	-->	用来判断某个引脚是否被设置为高电平
+
+
+
+万能io口初始化
+io_init(gpio_t *gpio)
+{
+    LL_GPIO_InitTypeDef GPIO_InitStruct;
+
+    assert_param(gpio != NULL);
+    if (gpio->port == GPIOA) {
+    	LL_IOP_GRP1_EnableClock(LL_IOP_GRP1_PERIPH_GPIOA);
+    } else if (gpio->port == GPIOB) {
+    	LL_IOP_GRP1_EnableClock(LL_IOP_GRP1_PERIPH_GPIOB);
+    } else if (gpio->port == GPIOC) {
+    	LL_IOP_GRP1_EnableClock(LL_IOP_GRP1_PERIPH_GPIOC);
+    }else {
+    	LL_IOP_GRP1_EnableClock(LL_IOP_GRP1_PERIPH_GPIOD);
+    }
+	GPIO_InitStruct.Pin = gpio->pin;
+	GPIO_InitStruct.Mode = gpio->mode;
+	GPIO_InitStruct.Pull = gpio->pull;
+	GPIO_InitStruct.Speed = LL_GPIO_SPEED_FREQ_LOW; //低速率 抗干扰
+	GPIO_InitStruct.OutputType=	gpio->OutputType;
+	GPIO_InitStruct.Alternate = gpio->altr;
+	LL_GPIO_Init(gpio->port, &GPIO_InitStruct);
+}
+
+
+
+
+
+
+
+
