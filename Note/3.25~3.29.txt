@@ -368,6 +368,17 @@ io_init(gpio_t *gpio)
 
 
 
-
+void USART2_SendString(char *str)
+{
+	while (*str) 
+	{
+		//等待发送缓冲区为空
+		while (LL_USART_IsActiveFlag_TXE(USART2) != 1);
+		// 发送一个字符
+		LL_USART_TransmitData8(USART2, *str);
+		str++;
+	}
+	while (!LL_USART_IsActiveFlag_TC(USART2));	//另一个是TC=1发送结束。
+}
 
 
