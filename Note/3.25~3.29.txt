@@ -382,3 +382,39 @@ void USART2_SendString(char *str)
 }
 
 
+
+
+Dirction ： DMA传输方向有四类
+
+外设到内存 Peripheral To Memory
+内存到外设 Memory To Peripheral
+内存到内存 Memory To Memory
+外设到外设 Peripheral To Peripheral
+
+//////////////////////////////////////////////////////////////////////
+Priority： DMA通信传输速度有四类
+
+最高优先级 Very Hight
+高优先级 Hight
+中等优先级 Medium
+低优先级；Low
+
+//////////////////////////////////////////////////////////////////////
+Mode：DMA传输模式有两类
+
+Normal正常模式：当一次DMA数据传输完后，停止DMA传送 ，也就是只传输一次。
+Circle循环模式：传输完成后又重新开始继续传输，不断循环永不停止。
+
+
+
+////////////////////////////////////////////////////////////////////
+
+HAL_UART_Transmit();串口发送数据，使用超时管理机制
+HAL_UART_Receive();串口接收数据，使用超时管理机制
+HAL_UART_Transmit_IT();串口中断模式发送
+HAL_UART_Receive_IT();串口中断模式接收
+HAL_UART_Transmit_DMA();串口DMA模式发送
+HAL_UART_Transmit_DMA();串口DMA模式接收
+HAL_UART_DMAPause() 暂停串口DMA
+HAL_UART_DMAResume(); 恢复串口DMA
+HAL_UART_DMAStop(); 结束串口DMA
