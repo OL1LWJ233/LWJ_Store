@@ -1,0 +1,52 @@
+
+typedef struct {
+    GPIO_TypeDef *port;					//端口			例如：GPIOA
+    uint32_t pin;								//引脚			例如：LL_GPIO_PIN_8
+    uint32_t mode;							//模式			例如：LL_GPIO_MODE_OUTPUT	-->	输出
+	  uint32_t speed;							//速率			例如：LOW		HIGH
+    uint32_t outputtype;				//输出模式	例如：LL_GPIO_OUTPUT_PUSHPULL
+  	uint32_t pull;							//上下拉		例如：LL_GPIO_PULL_NO
+    uint32_t altr;							//复用			例如：LL_GPIO_AF_0
+}gpio_t;
+
+
+const gpio_t GPIO_LED_ControlMenu = {	//	高 -->	亮
+	.port = GPIOB,
+	.pin = LL_GPIO_PIN_8,
+	.mode = LL_GPIO_MODE_OUTPUT,
+	.outputtype = LL_GPIO_OUTPUT_PUSHPULL,
+	.pull = LL_GPIO_PULL_NO,
+};
+
+
+//引脚数量
+#define PinNum 1		
+
+
+gpio_t *UserControlPin[PinNum] = 
+{
+	(gpio_t *)&GPIO_LED_ControlMenu,
+};
+
+
+enum{
+	LOW = 0,
+	HIGH = 1,
+}PinStatus;
+
+
+
+
+
+void PinStatusControl(uint8_t name, uint8_t status)
+{
+	switch(status)
+	{
+		case HIGH:
+			LL_GPIO_SetOutputPin(UserControlPin[name]->port, UserControlPin[name]->pin);
+		case LOW:
+			LL_GPIO_ResetOutputPin(UserControlPin[name]->port, UserControlPin[name]->pin);
+		default:
+			break;
+	}
+}
