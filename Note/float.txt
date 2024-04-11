@@ -1,0 +1,12 @@
+float Fdata = 26.3244484;
+
+
+unsigned int temp = (unsigned int)(Fdata*100);		//Fdata=26.3244484   temp=2633
+	
+	char tempstr[6] = {0};
+	tempstr[0] = temp/1000+48;			//		2632/1000=2 
+	tempstr[1] = temp/100%10+48;		//		2632/100=26		26%10=6
+	tempstr[2] = '.';
+	tempstr[3] = temp/10%10+48;		//		2632/10=262		263%10=2
+	tempstr[4] = temp%10+48;				//		2632%10=2
+	tempstr[5] = '\0';
