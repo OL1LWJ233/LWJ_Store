@@ -1,0 +1,35 @@
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+
+
+int main()
+{
+	
+	//^异或---相同为0不同为1 
+    //char str[] = "$GPGGA,022206.00,3905.87672799,N,11704.89762467,E,4,32,0.5,39.2934,M,-7.5829,M,02,0000*41";
+    char str[] = "$GPGGA,021850.00,2233.51747,N,11356.58160,E,1,09,0.97,69.2,M,-2.7,M,,*7A";
+    int result = str[1];
+    for(int i = 2; str[i] != '*'; i++)
+    {
+        result ^= str[i];
+    }
+    printf("异或校验计算的：%x\n", result);
+	
+	char RefPositionData[]="*";
+	char *Position=strstr(str,RefPositionData);
+	
+	printf("数据中的：%s\n", Position+1);
+	
+	// 比较 result 和 Position+1
+    if (result == strtol(Position + 1, NULL, 16))
+    {
+        printf("result 和 Position+1 是相同的。\n");
+    }
+    else
+    {
+        printf("result 和 Position+1 不同。\n");
+    }
+    return 0;
+}
+
