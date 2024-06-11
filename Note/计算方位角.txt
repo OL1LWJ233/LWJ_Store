@@ -1,0 +1,34 @@
+#include "stdio.h"
+#include "math.h"
+
+
+#define PI acos(-1)
+//计算旋转角度
+double getAngle(double lon1, double lat1, double lon2, double lat2)
+{
+	double deg2rad = PI / 180;
+	double dlat = (lat2 - lat1) * deg2rad;
+	double dlon = (lon2 - lon1) * deg2rad;
+	double y = sin(dlon) *cos(lat2 * deg2rad);
+	double x = cos(lat1 * deg2rad) * sin(lat2 * deg2rad) - sin(lat1 * deg2rad) * cos(lat2 * deg2rad) * cos(dlon);
+	double angle = atan2(y, x) * 180 / PI;
+	
+	return angle;
+}
+
+int main()
+{
+	
+	double lat1 = 39.907522; // 纬度
+    double lon1 = 116.3972333; // 经度
+    double lat2 = 31.230422; 
+    double lon2 = 121.473733;
+    
+    double PosAngle = getAngle( lon1, lat1, lon2,lat2); 
+    printf("-----  %.0f  ------\n", PosAngle);
+    //网页计算：153°
+    //程序计算：153.03
+	return 0;
+}
+  
+
